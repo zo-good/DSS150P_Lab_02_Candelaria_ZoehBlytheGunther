@@ -3,7 +3,7 @@ Students implement file ingestion + paginated REST API ingestion + watermark + d
 """
 from pathlib import Path
 from datetime import datetime, timezone
-import json, hashlib, shutil
+import json, hashlib, shutil, csv, uuid
 import requests
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -38,8 +38,8 @@ def ingest_files():
         manifest = []
 
     already_ingested_hashes = {entry['sha256'] for entry in manifest}
-
     source_files = ['customers.csv', 'orders.json', 'products.parquet']
+    written = 0
 
     for filename in source_files:
         source_path = DATA/filename
@@ -60,9 +60,11 @@ def ingest_files():
             'bytes': file_size,
         })
         already_ingested_hashes.add(file_hash)
+        written += 1
         print(f"COPIED {filename} -> raw/files/{filename} (sha256={file_hash[:12]}...)")
 
     manifest_path.write_text(json.dumps(manifest, indent=2))
+    return {'records_read': len(source_files), 'records_written': written, 'duplicates_removed': 0}
 
 def fetch_api_page(page, per_page=20, updated_after=None):
     params={'page':page,'per_page':per_page}
@@ -131,6 +133,53 @@ def ingest_api():
     else:
         print("No new records fetched; watermark unchanged")
 
+    return {
+        'records_read': len(fetched_items),
+        'records_written': len(deduped),
+        'duplicates_removed': duplicates_removed,
+        'watermark_before': watermark,
+        'watermark_after': load_watermark(),
+    }
+
+LOG_PATH = STATE/'pipeline_run_log.csv'
+LOG_HEADER = ['run_id','started_at','finished_at','status','source','records_read',
+              'records_written','duplicates_removed','watermark_before','watermark_after','error_message']
+
+def append_run_log(row):
+    STATE.mkdir(exist_ok=True)
+    file_exists = LOG_PATH.exists()
+    with LOG_PATH.open('a', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=LOG_HEADER)
+        if not file_exists:
+            writer.writeheader()
+        writer.writerow(row)
+
+def run_source(run_id, source_name, func, watermark_before=''):
+    started = utc_now()
+    try:
+        stats = func()
+        append_run_log({
+            'run_id': run_id, 'started_at': started, 'finished_at': utc_now(),
+            'status': 'SUCCESS', 'source': source_name,
+            'records_read': stats.get('records_read', ''),
+            'records_written': stats.get('records_written', ''),
+            'duplicates_removed': stats.get('duplicates_removed', ''),
+            'watermark_before': stats.get('watermark_before', ''),
+            'watermark_after': stats.get('watermark_after', ''),
+            'error_message': '',
+        })
+    except Exception as e:
+        append_run_log({
+            'run_id': run_id, 'started_at': started, 'finished_at': utc_now(),
+            'status': 'FAILED', 'source': source_name,
+            'records_read': '', 'records_written': '', 'duplicates_removed': '',
+            'watermark_before': watermark_before, 'watermark_after': load_watermark(),
+            'error_message': str(e),
+        })
+        raise
+
 if __name__=='__main__':
-   RAW.mkdir(exist_ok=True); STATE.mkdir(exist_ok=True)
-   ingest_files(); ingest_api()
+    RAW.mkdir(exist_ok=True); STATE.mkdir(exist_ok=True)
+    run_id = uuid.uuid4().hex[:8]
+    run_source(run_id, 'files', ingest_files)
+    run_source(run_id, 'api', ingest_api, watermark_before=load_watermark())
