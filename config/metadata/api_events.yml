@@ -1,0 +1,24 @@
+source_name: "REST API - /api/events"
+source_type: "REST API (paginated JSON)"
+location_or_endpoint: "http://127.0.0.1:8000/api/events"
+owner: "TODO - source owner unknown from profiling alone; likely an events/analytics service"
+description: "Customer engagement event stream (page views, cart, checkout, payment, support interactions) with nested metadata"
+record_count: "122 total events (per API's own 'total' field), paginated at 10 per page during inspection"
+schema:
+  - event_id
+  - customer_id
+  - event_type
+  - amount
+  - updated_at
+  - metadata (nested object - channel, campaign)
+primary_or_candidate_key: "event_id, but NOT unique alone — see known_quality_issues"
+update_pattern: "Live API; supports an updated_after query parameter, meaning it's designed for incremental/watermark-based polling rather than full reload every time"
+known_quality_issues:
+  - "Lab resources document that two event_id values are deliberately repeated with a newer updated_at each time — dedup logic must be code-driven (Task 3.3), not based on knowing which IDs in advance"
+  - "amount values observed range from small (593.10) to large (4882.46) with no documented valid range"
+acquisition_method: "Paginated GET requests, looping page by page until has_more is false"
+validation_checks:
+  - "event_id + updated_at combination determines which duplicate record to keep (greatest updated_at wins)"
+  - "amount must be a non-negative number"
+  - "updated_at must parse as a valid ISO 8601 timestamp"
+  - "has_more must eventually become false, or pagination is broken/infinite"

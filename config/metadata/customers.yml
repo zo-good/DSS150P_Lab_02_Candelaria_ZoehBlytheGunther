@@ -1,0 +1,25 @@
+source_name: "customers.csv"
+source_type: "CSV file"
+location_or_endpoint: "data/customers.csv"
+owner: "TODO - source owner unknown from profiling alone; would need to confirm with data source team"
+description: "Customer master records including contact info and signup details"
+record_count: 250
+schema:
+  - customer_id
+  - first_name
+  - last_name
+  - email
+  - city
+  - signup_date
+  - customer_segment
+primary_or_candidate_key: "customer_id"
+update_pattern: "TODO - unknown from a static file; likely a periodic export (daily/weekly) but needs confirmation"
+known_quality_issues:
+  - "3 duplicate customer_id values found"
+  - "2 exact duplicate rows found"
+  - "3 missing email values, 2 missing city values"
+acquisition_method: "File copy from shared location"
+validation_checks:
+  - "customer_id must be unique and non-null"
+  - "email, when present, should match a valid email format"
+  - "no fully duplicate rows should exist"

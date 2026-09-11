@@ -1,0 +1,26 @@
+source_name: "products.parquet"
+source_type: "Parquet file"
+location_or_endpoint: "data/products.parquet"
+owner: "TODO - source owner unknown from profiling alone; likely a product catalog system"
+description: "Product catalog including pricing, stock levels, and category/brand info"
+record_count: 200
+schema:
+  - product_id
+  - product_name
+  - category
+  - brand
+  - unit_price
+  - stock_quantity
+  - weight_kg
+primary_or_candidate_key: "product_id"
+update_pattern: "TODO - unknown from a static file; likely a periodic export from a product catalog system"
+known_quality_issues:
+  - "No missing values found across any of the 7 columns, in 200 records"
+  - "stock_quantity is stored as int32 in Parquet but would be read as the wider int64 if sourced from the CSV/JSON twins instead — Parquet preserves the original stored precision, plain-text formats don't"
+  - "At this row count (200), the Parquet file (14,652 bytes) is actually larger than the equivalent CSV (11,560 bytes) — Parquet's columnar/compression overhead only pays off at larger scale"
+acquisition_method: "File copy from shared location"
+validation_checks:
+  - "product_id must be unique and non-null"
+  - "unit_price must be a positive number"
+  - "stock_quantity must be a non-negative integer"
+  - "category and brand should match a known, finite set of values (not free text)"

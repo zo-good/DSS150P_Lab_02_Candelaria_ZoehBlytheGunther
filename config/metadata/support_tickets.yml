@@ -1,0 +1,26 @@
+source_name: "support_tickets"
+source_type: "PostgreSQL table"
+location_or_endpoint: "postgresql://dss150p-lab2-postgres:5432/dss150p (table: support_tickets)"
+owner: "TODO - source owner unknown from profiling alone; likely a customer support/helpdesk system"
+description: "Customer support ticket records including category, priority, assigned agent, and resolution timestamps"
+record_count: 250
+schema:
+  - ticket_id
+  - customer_id
+  - category
+  - priority
+  - assigned_agent
+  - opened_at
+  - resolved_at
+  - status
+primary_or_candidate_key: "ticket_id"
+update_pattern: "TODO - unknown; this lab only inspects the table, it is not ingested by the pipeline, so refresh behavior is out of scope for now"
+known_quality_issues:
+  - "4 tickets have no assigned_agent (NULL)"
+  - "resolved_at is NULL for any ticket still Open or In Progress, by design — it is the only nullable timestamp column"
+acquisition_method: "Direct database inspection only (bounded SELECT queries) — this source is profiled, not ingested, in this lab"
+validation_checks:
+  - "ticket_id must be unique and non-null (enforced by the database's own primary key constraint)"
+  - "resolved_at, when present, must be later than opened_at"
+  - "status should be one of a known finite set of values (e.g. Open, In Progress, Resolved, Closed)"
+  - "assigned_agent, when present, should match a known set of agent names"

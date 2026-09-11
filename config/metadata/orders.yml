@@ -1,0 +1,28 @@
+source_name: "orders.json"
+source_type: "JSON file"
+location_or_endpoint: "data/orders.json"
+owner: "TODO - source owner unknown from profiling alone; likely an orders/fulfillment system"
+description: "Customer order records including totals, shipping details, and status"
+record_count: 250
+schema:
+  - order_id
+  - customer_id
+  - item_count
+  - subtotal
+  - shipping_fee
+  - total_amount
+  - status
+  - order_timestamp
+  - shipping (nested object)
+primary_or_candidate_key: "order_id"
+update_pattern: "TODO - unknown from a static file; likely a periodic export from an orders/fulfillment system"
+known_quality_issues:
+  - "No missing/null values found across any of the 9 keys, in 250 records"
+  - "order_timestamp is stored as plain text, not a native timestamp type — needs explicit parsing downstream"
+acquisition_method: "File copy from shared location"
+validation_checks:
+  - "order_id must be unique and non-null"
+  - "customer_id should exist in customers.csv (referential integrity across sources)"
+  - "total_amount should equal subtotal + shipping_fee"
+  - "order_timestamp must parse as a valid ISO 8601 timestamp"
+  - "item_count must be a positive integer"
