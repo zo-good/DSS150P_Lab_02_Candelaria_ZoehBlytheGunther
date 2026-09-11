@@ -28,9 +28,41 @@ def save_watermark(value):
     (STATE/'api_watermark.json').write_text(json.dumps({'updated_at':value},indent=2))
 
 def ingest_files():
-    # TODO: copy CSV/JSON/Parquet to raw/files/ without creating duplicates on rerun.
-    # Add manifest entries with source_file, ingested_at, sha256, bytes.
-    pass
+    files_dir = RAW/'files'
+    files_dir.mkdir(parents=True, exist_ok=True)
+    manifest_path = files_dir/'manifest.json'
+
+    if manifest_path.exists():
+        manifest = json.loads(manifest_path.read_text())
+    else:
+        manifest = []
+
+    already_ingested_hashes = {entry['sha256'] for entry in manifest}
+
+    source_files = ['customers.csv', 'orders.json', 'products.parquet']
+
+    for filename in source_files:
+        source_path = DATA/filename
+        file_hash = sha256_file(source_path)
+        file_size = source_path.stat().st_size
+
+        if file_hash in already_ingested_hashes:
+            print(f"SKIP {filename}: content hash already ingested, nothing changed")
+            continue
+
+        dest_path = files_dir/filename
+        shutil.copy2(source_path, dest_path)
+
+        manifest.append({
+            'source_file': filename,
+            'ingested_at': utc_now(),
+            'sha256': file_hash,
+            'bytes': file_size,
+        })
+        already_ingested_hashes.add(file_hash)
+        print(f"COPIED {filename} -> raw/files/{filename} (sha256={file_hash[:12]}...)")
+
+    manifest_path.write_text(json.dumps(manifest, indent=2))
 
 def fetch_api_page(page, per_page=20, updated_after=None):
     params={'page':page,'per_page':per_page}
