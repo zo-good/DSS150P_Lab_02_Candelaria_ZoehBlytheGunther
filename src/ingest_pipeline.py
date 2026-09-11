@@ -70,15 +70,67 @@ def fetch_api_page(page, per_page=20, updated_after=None):
     r=requests.get(API_URL,params=params,timeout=30); r.raise_for_status(); return r.json()
 
 def ingest_api():
-    # TODO:
-    # 1) read watermark
-    # 2) follow pagination until has_more=False
-    # 3) append ingestion metadata (_ingested_at, _source)
-    # 4) deduplicate by event_id keeping greatest updated_at
-    # 5) write raw/api/events.jsonl atomically
-    # 6) update watermark only after successful write
-    pass
+    watermark = load_watermark()
+    per_page = 20
+    page = 1
+    fetched_items = []
+
+    while True:
+        try:
+            data = fetch_api_page(page, per_page=per_page, updated_after=watermark)
+        except requests.exceptions.RequestException as e:
+            print(f"ERROR: API request failed on page {page}: {e}")
+            raise
+
+        items = data['items']
+        for item in items:
+            item['_ingested_at'] = utc_now()
+            item['_source'] = 'api:/api/events'
+        fetched_items.extend(items)
+
+        if not data['has_more']:
+            break
+        page = data['next_page']
+
+    print(f"Fetched {len(fetched_items)} new record(s) from API (watermark={watermark})")
+
+    raw_api_dir = RAW/'api'
+    raw_api_dir.mkdir(parents=True, exist_ok=True)
+    events_path = raw_api_dir/'events.jsonl'
+
+    existing_items = []
+    if events_path.exists():
+        with events_path.open('r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    existing_items.append(json.loads(line))
+
+    combined = existing_items + fetched_items
+    best_by_id = {}
+    for item in combined:
+        eid = item['event_id']
+        if eid not in best_by_id or item['updated_at'] > best_by_id[eid]['updated_at']:
+            best_by_id[eid] = item
+    deduped = list(best_by_id.values())
+    duplicates_removed = len(combined) - len(deduped)
+
+    tmp_path = events_path.with_suffix('.jsonl.tmp')
+    with tmp_path.open('w', encoding='utf-8') as f:
+        for item in deduped:
+            f.write(json.dumps(item) + '\n')
+    tmp_path.replace(events_path)
+
+    print(f"Wrote {len(deduped)} deduplicated record(s) to raw/api/events.jsonl ({duplicates_removed} duplicate(s) removed)")
+
+    if fetched_items:
+        new_watermark = max(item['updated_at'] for item in fetched_items)
+        if watermark is None or new_watermark > watermark:
+            save_watermark(new_watermark)
+            print(f"Watermark updated: {watermark} -> {new_watermark}")
+    else:
+        print("No new records fetched; watermark unchanged")
 
 if __name__=='__main__':
-    RAW.mkdir(exist_ok=True); STATE.mkdir(exist_ok=True)
-    ingest_files(); ingest_api()
+   RAW.mkdir(exist_ok=True); STATE.mkdir(exist_ok=True)
+   ingest_files(); ingest_api()
