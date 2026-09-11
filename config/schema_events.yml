@@ -1,0 +1,37 @@
+table_name: events
+fields:
+  - name: event_id
+    logical_type: string
+    nullable: false
+    key_role: candidate key, but NOT unique alone — see note below
+    definition: "Identifier for an engagement event"
+  - name: customer_id
+    logical_type: string
+    nullable: false
+    key_role: foreign key (references customers.customer_id)
+    definition: "Customer associated with this event"
+  - name: event_type
+    logical_type: string (categorical)
+    nullable: false
+    key_role: none
+    definition: "Kind of event (e.g. page_view, add_to_cart, checkout, payment, support)"
+  - name: amount
+    logical_type: decimal
+    nullable: false
+    key_role: none
+    definition: "Monetary value associated with the event"
+  - name: updated_at
+    logical_type: timestamp
+    nullable: false
+    key_role: part of the true logical key, alongside event_id
+    definition: "When this event record was last updated. Source representation is plain text (str) in ISO 8601 format; logical type is timestamp and requires explicit parsing. Also drives the watermark for incremental ingestion."
+  - name: metadata.channel
+    logical_type: string (categorical)
+    nullable: true
+    key_role: none
+    definition: "Acquisition channel from the nested metadata object (e.g. mobile, web, partner)"
+  - name: metadata.campaign
+    logical_type: string (categorical)
+    nullable: true
+    key_role: none
+    definition: "Marketing campaign from the nested metadata object (e.g. none, retarget, launch)"

@@ -1,0 +1,37 @@
+table_name: customers
+fields:
+  - name: customer_id
+    logical_type: string
+    nullable: false
+    key_role: primary key (source has 3 duplicate values — should be enforced unique downstream)
+    definition: "Unique identifier for a customer"
+  - name: first_name
+    logical_type: string
+    nullable: false
+    key_role: none
+    definition: "Customer's first name"
+  - name: last_name
+    logical_type: string
+    nullable: false
+    key_role: none
+    definition: "Customer's last name"
+  - name: email
+    logical_type: string
+    nullable: true
+    key_role: none
+    definition: "Customer's contact email address (3 missing in source)"
+  - name: city
+    logical_type: string
+    nullable: true
+    key_role: none
+    definition: "Customer's city of residence (2 missing in source)"
+  - name: signup_date
+    logical_type: date
+    nullable: false
+    key_role: none
+    definition: "Date the customer registered. Source representation is plain text (str); logical type is date and requires explicit parsing downstream."
+  - name: customer_segment
+    logical_type: string (categorical)
+    nullable: false
+    key_role: none
+    definition: "Business-assigned customer segment/tier"
