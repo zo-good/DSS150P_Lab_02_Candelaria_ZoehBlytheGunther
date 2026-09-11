@@ -1,18 +1,50 @@
 dataset: customers
-owner: "TODO"
+description: "Customer master records including contact info, signup date, and business segment"
+owner: "TODO - confirm actual owner; likely a CRM or customer data team in a real organization"
+producer: "TODO - confirm actual producer system (e.g. CRM export job)"
+consumer: "Data engineering / analytics team building the raw ingestion pipeline for this lab"
 source_type: csv
 primary_key: customer_id
 delivery:
-  cadence: "TODO"
+  cadence: "TODO - unknown from a static file; assumed periodic (e.g. daily) export pending confirmation from source owner"
 fields:
   - name: customer_id
     type: string
     nullable: false
     unique: true
+  - name: first_name
+    type: string
+    nullable: false
+    unique: false
+  - name: last_name
+    type: string
+    nullable: false
+    unique: false
   - name: email
     type: string
     nullable: true
+    unique: false
+  - name: city
+    type: string
+    nullable: true
+    unique: false
+  - name: signup_date
+    type: date
+    nullable: false
+    unique: false
+  - name: customer_segment
+    type: string
+    nullable: false
+    unique: false
 quality_rules:
-  - "TODO: define at least 5 rules"
+  - "customer_id must be non-null and unique (source currently violates this — 3 duplicate values found; must be flagged, not silently fixed)"
+  - "no fully duplicate rows should exist (source currently violates this — 2 exact duplicate rows found)"
+  - "email, when present, must match a valid email format (~ contains @ and a domain)"
+  - "signup_date must parse as a valid date and not be in the future"
+  - "customer_segment must be one of a known, finite set of values"
 change_policy:
-  schema_change_notice: "TODO"
+  schema_change_notice: "TODO - no formal process exists yet for this lab; in a real pipeline, the producer would need to notify the consumer before adding/removing/renaming fields, ideally via versioned schema + advance notice period"
+contact_escalation: "TODO - no real contact exists for this lab exercise; in a real organization this would name a specific person/team and an escalation channel (e.g. Slack channel, ticket queue)"
+ingestion_approach:
+  method: "Full reload"
+  justification: "customers.csv is a static file snapshot with no update_after-style mechanism to fetch only new/changed records. Without a reliable modified-timestamp or change-tracking field, incremental ingestion isn't possible here — unlike the events API, which does support incremental fetching via updated_after and a watermark."
