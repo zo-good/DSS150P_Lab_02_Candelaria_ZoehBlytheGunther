@@ -1,0 +1,3 @@
+## Academic Integrity and AI Use
+
+I used Claude (Anthropic) as an assistant while completing this lab. Specifically, it helped with debugging issues I ran into while setting up and running the pipeline code (including a Python indentation error in the `__main__` block, an initially empty `.gitignore` file, and general terminal/PowerShell troubleshooting), and with compiling the evidence documentation — specifically organizing and formatting the terminal output transcripts in `docs/evidence/terminal_transcripts.md` from commands I actually ran. All code was written by me with Claude's guidance and explanation, and all environment setup, command execution, and verification steps were performed on my own machine.
