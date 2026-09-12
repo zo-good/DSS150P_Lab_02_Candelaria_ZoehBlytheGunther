@@ -1,7 +1,6 @@
 .venv/
 raw/
-state/
-!state/pipeline_run_log.csv
+state/api_watermark.json
 __pycache__/
 *.pyc
 .env
